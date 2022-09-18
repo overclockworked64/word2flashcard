@@ -14,7 +14,7 @@ It reads from stdin, so feed it a word using a Heredoc:
 word2flashcard <<< word
 ```
 
-or, feed it an entire list of words:
+or, feed it an entire list of words separated by newlines:
 
 ```sh
 word2flashcard < words.txt
