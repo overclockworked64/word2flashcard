@@ -1,15 +1,16 @@
+from pathlib import Path
+import sys
+
 import asks
 import bs4
 import trio
 import trio_parallel
-import pathlib
-import sys
 
 
 MAX_TASKS_IN_FLIGHT = 200
 CAMBRIDGE_URL = "https://dictionary.cambridge.org/dictionary/english/"
 VAULT_PATH = (
-    pathlib.Path().home()
+    Path().home()
     / "Documents"
     / "dbase"
     / "dbase"
@@ -17,7 +18,13 @@ VAULT_PATH = (
     / "english"
     / "wordlists"
 )
-USER_AGENT = "curl/7.16.3 (i686-pc-cygwin) libcurl/7.16.3 OpenSSL/0.9.8h zlib/1.2.3 libssh2/0.15-CVS"
+USER_AGENT = (
+    "curl/7.16.3 (i686-pc-cygwin) "
+    + "libcurl/7.16.3 "
+    + "OpenSSL/0.9.8h "
+    + "zlib/1.2.3 "
+    + "libssh2/0.15-CVS"
+)
 
 
 def extract_info(block):
@@ -49,7 +56,7 @@ async def micrograbber(tx, limiter, word):
     await tx.send((word, page.text))
 
 
-async def receiver(rx, words, nursery):
+async def receiver(nursery, rx, words):
     async for (word, page) in rx:
         nursery.start_soon(trio_parallel.run_sync, sync_worker, word, page)
         words.remove(word)
@@ -61,7 +68,7 @@ async def amain(words):
     limiter = trio.CapacityLimiter(MAX_TASKS_IN_FLIGHT)
     tx, rx = trio.open_memory_channel(0)
     async with trio.open_nursery() as nursery:
-        nursery.start_soon(receiver, rx, words, nursery)
+        nursery.start_soon(receiver, nursery, rx, words)
         for word in words:
             nursery.start_soon(micrograbber, tx.clone(), limiter, word)
 
